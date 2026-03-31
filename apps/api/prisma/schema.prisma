@@ -1,0 +1,260 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  STUDENT
+  ADMIN
+}
+
+enum SubscriptionTier {
+  FREE
+  WEEKLY
+  MONTHLY
+}
+
+enum MockInterviewStatus {
+  DRAFT
+  IN_PROGRESS
+  COMPLETED
+}
+
+enum PathwayStatus {
+  DRAFT
+  PUBLISHED
+}
+
+enum PaymentStatus {
+  CREATED
+  PAID
+  FAILED
+}
+
+enum PlanType {
+  WEEK
+  MONTH
+}
+
+model User {
+  id                      String   @id @db.Uuid
+  email                   String   @unique
+  name                    String?
+  role                    Role     @default(STUDENT)
+  subscriptionTier        SubscriptionTier @default(FREE) @map("subscription_tier")
+  freeAttemptsRemaining   Int      @default(5) @map("free_attempts_remaining")
+  createdAt               DateTime @default(now()) @map("created_at")
+  updatedAt               DateTime @updatedAt @map("updated_at")
+
+  resumes             Resume[]
+  mockInterviews      MockInterview[]
+  pathwayProgress     UserPathwayProgress[]
+  batchEnrollments    BatchEnrollment[]
+  payments            Payment[]
+  adminPathways       Pathway[]       @relation("PathwayAdmin")
+  adminBatches        Batch[]        @relation("BatchAdmin")
+  wizardSessions      InterviewWizardSession[]
+
+  @@map("users")
+}
+
+model Resume {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  title     String
+  content   String   @db.Text
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("resumes")
+}
+
+model MockInterview {
+  id             String              @id @default(uuid()) @db.Uuid
+  userId         String              @map("user_id") @db.Uuid
+  company        String?
+  jobRole        String              @map("job_role")
+  jd             String              @db.Text
+  status         MockInterviewStatus @default(DRAFT)
+  attemptNumber  Int                 @map("attempt_number")
+  questions      Json?
+  overallScore   Int?                @map("overall_score")
+  summaryFeedback String?            @map("summary_feedback") @db.Text
+  strengths      Json?
+  improvements   Json?
+  createdAt      DateTime            @default(now()) @map("created_at")
+  updatedAt      DateTime            @updatedAt @map("updated_at")
+
+  user    User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  answers MockInterviewAnswer[]
+
+  @@index([userId])
+  @@map("mock_interviews")
+}
+
+model MockInterviewAnswer {
+  id              String   @id @default(uuid()) @db.Uuid
+  mockInterviewId String   @map("mock_interview_id") @db.Uuid
+  question        String   @db.Text
+  userAnswer      String   @map("user_answer") @db.Text
+  aiFeedback      String?  @map("ai_feedback") @db.Text
+  score           Int?
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  mockInterview MockInterview @relation(fields: [mockInterviewId], references: [id], onDelete: Cascade)
+
+  @@index([mockInterviewId])
+  @@map("mock_interview_answers")
+}
+
+model Pathway {
+  id        String        @id @default(uuid()) @db.Uuid
+  adminId   String        @map("admin_id") @db.Uuid
+  name      String
+  domain    String
+  status    PathwayStatus @default(DRAFT)
+  createdAt DateTime      @default(now()) @map("created_at")
+  updatedAt DateTime      @updatedAt @map("updated_at")
+
+  admin    User                 @relation("PathwayAdmin", fields: [adminId], references: [id], onDelete: Cascade)
+  modules  PathwayModule[]
+  progress UserPathwayProgress[]
+
+  @@index([adminId])
+  @@map("pathways")
+}
+
+model PathwayModule {
+  id          String   @id @default(uuid()) @db.Uuid
+  pathwayId   String   @map("pathway_id") @db.Uuid
+  name        String
+  content     String   @db.Text
+  sortOrder   Int      @default(0) @map("sort_order")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  pathway     Pathway            @relation(fields: [pathwayId], references: [id], onDelete: Cascade)
+  assessments PathwayAssessment[]
+
+  @@index([pathwayId])
+  @@map("pathway_modules")
+}
+
+model PathwayAssessment {
+  id            String   @id @default(uuid()) @db.Uuid
+  moduleId      String   @map("module_id") @db.Uuid
+  questions     Json
+  passingScore  Int      @map("passing_score")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  module PathwayModule @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+
+  @@index([moduleId])
+  @@map("pathway_assessments")
+}
+
+model UserPathwayProgress {
+  id               String   @id @default(uuid()) @db.Uuid
+  userId           String   @map("user_id") @db.Uuid
+  pathwayId        String   @map("pathway_id") @db.Uuid
+  progressPercent  Int      @default(0) @map("progress_percent")
+  completedModules Json?    @map("completed_modules")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  pathway Pathway @relation(fields: [pathwayId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, pathwayId])
+  @@map("user_pathway_progress")
+}
+
+model Batch {
+  id        String   @id @default(uuid()) @db.Uuid
+  adminId   String   @map("admin_id") @db.Uuid
+  name      String
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  admin         User              @relation("BatchAdmin", fields: [adminId], references: [id], onDelete: Cascade)
+  enrollments BatchEnrollment[]
+
+  @@index([adminId])
+  @@map("batches")
+}
+
+model BatchEnrollment {
+  id        String   @id @default(uuid()) @db.Uuid
+  batchId   String   @map("batch_id") @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+
+  batch Batch @relation(fields: [batchId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([batchId, userId])
+  @@map("batch_enrollments")
+}
+
+model Payment {
+  id               String        @id @default(uuid()) @db.Uuid
+  userId           String        @map("user_id") @db.Uuid
+  amount           Int
+  planType         PlanType      @map("plan_type")
+  razorpayOrderId  String?       @map("razorpay_order_id")
+  razorpayPaymentId String?      @map("razorpay_payment_id")
+  status           PaymentStatus @default(CREATED)
+  createdAt        DateTime      @default(now()) @map("created_at")
+  updatedAt        DateTime      @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("payments")
+}
+
+enum WizardType {
+  HR
+  TECHNICAL
+  MANAGERIAL
+}
+
+model InterviewWizardSession {
+  id              String     @id @default(uuid()) @db.Uuid
+  userId          String     @map("user_id") @db.Uuid
+  interviewType   WizardType @map("interview_type")
+  status          MockInterviewStatus @default(DRAFT)
+  questions       Json?
+  overallScore    Int?       @map("overall_score")
+  summaryFeedback String?    @map("summary_feedback") @db.Text
+  strengths       Json?
+  improvements    Json?
+  createdAt       DateTime   @default(now()) @map("created_at")
+  updatedAt       DateTime   @updatedAt @map("updated_at")
+
+  user    User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  answers WizardSessionAnswer[]
+
+  @@index([userId])
+  @@map("interview_wizard_sessions")
+}
+
+model WizardSessionAnswer {
+  id         String   @id @default(uuid()) @db.Uuid
+  sessionId  String   @map("session_id") @db.Uuid
+  question   String   @db.Text
+  userAnswer String   @map("user_answer") @db.Text
+  aiFeedback String?  @map("ai_feedback") @db.Text
+  score      Int?
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  session InterviewWizardSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId])
+  @@map("wizard_session_answers")
+}
