@@ -1,17 +1,16 @@
 {
   "name": "lampify",
+  "version": "1.0.0",
   "private": true,
   "workspaces": [
-    "apps/api",
-    "apps/web"
+    "apps/web",
+    "apps/api"
   ],
   "scripts": {
-    "dev": "concurrently \"npm run dev -w apps/api\" \"npm run dev -w apps/web\"",
-    "db:generate": "npm run db:generate -w apps/api",
-    "db:push": "npm run db:push -w apps/api",
+    "dev": "concurrently \"npm run dev -w apps/web\" \"npm run dev -w apps/api\"",
     "build": "npm run build -w apps/web && npm run build -w apps/api"
   },
   "devDependencies": {
-    "concurrently": "^9.1.2"
+    "concurrently": "^8.2.0"
   }
 }
