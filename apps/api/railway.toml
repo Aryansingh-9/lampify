@@ -1,8 +1,9 @@
 [build]
 builder = "NIXPACKS"
+command = "cd apps/api && npm run build"
 
 [deploy]
-startCommand = "npx prisma db push && node dist/index.js"
+startCommand = "cd apps/api && npx prisma db push && node dist/index.js"
 healthcheckPath = "/health"
-healthcheckTimeout = 100
+healthcheckTimeout = 300
 restartPolicyType = "ON_FAILURE"
