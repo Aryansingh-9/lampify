@@ -20,7 +20,7 @@ const allowed = (process.env.CORS_ORIGIN ?? "")
 console.log("DEBUG: Allowed origins =", allowed);
 
 const corsOptions = {
-  origin(origin, callback) {
+  origin(origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) {
     // allow non-browser clients / same-origin server-to-server
     if (!origin) return callback(null, true);
 
