@@ -14,29 +14,37 @@ const PORT = Number(process.env.PORT) || 4000;
 
 const allowed = process.env.CORS_ORIGIN?.split(",").map((s) => s.trim()) ?? ["http://localhost:3000"];
 
+// ✅ CORS FIRST - before any other middleware
 app.use(
   cors({
     origin: allowed,
     credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
   })
 );
 
-app.post("/payments/webhook", paymentsWebhookMiddleware, paymentsWebhookHandler);
-
+// ✅ Express JSON parsing
 app.use(express.json({ limit: "2mb" }));
 
+// ✅ Health check
 app.get("/health", (_req, res) => {
   res.json({ ok: true });
 });
 
+// ✅ Routes
 app.use("/auth", authRoutes);
 app.use(userRoutes);
 app.use(mockRoutes);
 app.use(pathwayRoutes);
 app.use(wizardRoutes);
 app.use(adminRoutes);
+
+// ✅ Payments webhook (AFTER express.json)
+app.post("/payments/webhook", paymentsWebhookMiddleware, paymentsWebhookHandler);
 app.use(paymentRoutes);
 
+// ✅ Error handler
 app.use((err: unknown, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
   console.error(err);
   res.status(500).json({ error: "Internal server error" });
