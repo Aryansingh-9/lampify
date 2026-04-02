@@ -4,6 +4,7 @@ command = "cd apps/api && npm run build"
 
 [deploy]
 startCommand = "cd apps/api && npx prisma db push --schema=./prisma/schema.prisma && node dist/index.js"
+port = 4000
 healthcheckPath = "/health"
 healthcheckTimeout = 300
 restartPolicyType = "ON_FAILURE"
