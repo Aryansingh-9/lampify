@@ -12,21 +12,31 @@ import paymentRoutes, { paymentsWebhookHandler, paymentsWebhookMiddleware } from
 const app = express();
 const PORT = Number(process.env.PORT) || 4000;
 
-const allowed = process.env.CORS_ORIGIN?.split(",").map((s) => s.trim()) ?? ["http://localhost:3000"];
+const allowed = (process.env.CORS_ORIGIN ?? "")
+  .split(",")
+  .map((s) => s.trim())
+  .filter(Boolean);
 
+console.log("DEBUG: Allowed origins =", allowed);
 
-console.log("DEBUG: CORS_ORIGIN =", process.env.CORS_ORIGIN);
-console.log("DEBUG: allowed =", allowed);
+const corsOptions = {
+  origin(origin, callback) {
+    // allow non-browser clients / same-origin server-to-server
+    if (!origin) return callback(null, true);
+
+    const ok = allowed.includes(origin);
+    console.log("[CORS] req Origin:", origin, "allowed?", ok);
+    return callback(ok ? null : new Error("Not allowed by CORS"), ok);
+  },
+  credentials: true,
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
+  allowedHeaders: ["Content-Type", "Authorization"],
+  optionsSuccessStatus: 200,
+};
+
 // ✅ CORS FIRST - MOST IMPORTANT
-app.use(
-  cors({
-    origin: allowed,
-    credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
-    optionsSuccessStatus: 200,
-  })
-);
+app.use(cors(corsOptions));
+app.options("*", cors(corsOptions)); // important for preflight
 
 app.use(express.json({ limit: "2mb" }));
 
