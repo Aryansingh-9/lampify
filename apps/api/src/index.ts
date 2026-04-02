@@ -14,6 +14,9 @@ const PORT = Number(process.env.PORT) || 4000;
 
 const allowed = process.env.CORS_ORIGIN?.split(",").map((s) => s.trim()) ?? ["http://localhost:3000"];
 
+
+console.log("DEBUG: CORS_ORIGIN =", process.env.CORS_ORIGIN);
+console.log("DEBUG: allowed =", allowed);
 // ✅ CORS FIRST - MOST IMPORTANT
 app.use(
   cors({
